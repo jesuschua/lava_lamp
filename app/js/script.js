@@ -13,10 +13,11 @@ class Particle {
         this.speed = 0.2 + Math.random() * 0.8;
         this.radius = 3 + Math.random() * 2;
         this.direction = 1;
+        this.weight = this.radius; // Weight based on radius
     }
 
-    update() {
-        this.y -= this.speed * this.direction;
+    update(weight) {
+        this.y -= this.speed * this.direction * (1 / weight);
         if (this.y < 0 || this.y > canvas.height) {
             this.direction *= -1;
         }
@@ -81,10 +82,13 @@ function drawBlob(blob) {
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    particles.forEach(particle => particle.update());
-
     let blobs = findBlobs();
-    blobs.forEach(drawBlob);
+
+    blobs.forEach(blob => {
+        let totalWeight = blob.reduce((sum, p) => sum + p.weight, 0);
+        blob.forEach(particle => particle.update(totalWeight));
+        drawBlob(blob);
+    });
 
     requestAnimationFrame(animate);
 }
