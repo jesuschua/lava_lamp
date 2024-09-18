@@ -49,7 +49,7 @@ function findBlobs() {
         for (let j = i + 1; j < particles.length; j++) {
             if (assigned.has(j)) continue;
 
-            if (distance(particles[i], particles[j]) < 30) {
+            if (distance(particles[i], particles[j]) < 15) {
                 blob.push(particles[j]);
                 assigned.add(j);
             }
