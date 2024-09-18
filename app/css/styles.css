@@ -13,15 +13,6 @@
     overflow: hidden;
 }
 
-.small-box {
-    width: 5px;
-    height: 5px;
-    background-color: #ff6347; /* Reddish small box */
-    position: absolute;
-    bottom: 0;
-    animation: moveUpDown 10s infinite alternate;
-}
-
 @keyframes moveUpDown {
     from {
         bottom: 0;
