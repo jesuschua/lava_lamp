@@ -43,8 +43,8 @@ class Blob {
         this.x = x;
         this.y = y;
         this.r = r;
-        this.vx = (Math.random() - 0.5) * 0.4; // Horizontal initial velocity
-        this.vy = -0.8 - Math.random() * 0.8;  // Even stronger initial upward velocity
+        this.vx = (Math.random() - 0.5) * 0.4 * config.speedMultiplier; 
+        this.vy = (-0.8 - Math.random() * 0.8) * config.speedMultiplier;  
         this.baseR = r;
         this.color = {
             r: 255,
@@ -56,7 +56,7 @@ class Blob {
         this.targetVy = 0;
         // Add unique oscillation phase for each blob
         this.phase = Math.random() * Math.PI * 2;
-        this.oscillationSpeed = 0.002 + Math.random() * 0.001; // Faster oscillation
+        this.oscillationSpeed = (0.002 + Math.random() * 0.001) * config.speedMultiplier; // Faster oscillation
     }
 
     update() {
@@ -71,21 +71,21 @@ class Blob {
             
             if (this.y > bottomThird) {
                 // Much stronger upward force near the bottom
-                this.targetVy = -0.1 - Math.sin(this.phase) * 0.4;
+                this.targetVy = (-0.1 - Math.sin(this.phase) * 0.4) * config.speedMultiplier;
             } else if (this.y < topThird) {
                 // Strong downward force near the top
-                this.targetVy = 0.1 + Math.sin(this.phase) * 0.4;
+                this.targetVy = (0.1 + Math.sin(this.phase) * 0.4) * config.speedMultiplier;
             } else {
                 // Moderate forces in the middle with more randomness
-                this.targetVy = (Math.random() > 0.5 ? 0.4 : -0.4) + Math.sin(this.phase) * 0.5;
+                this.targetVy = ((Math.random() > 0.5 ? 0.4 : -0.4) + Math.sin(this.phase) * 0.5) * config.speedMultiplier;
             }
             
             // Add gentle horizontal oscillation
-            this.targetVx = Math.sin(this.phase * 0.7) * 0.3;
+            this.targetVx = Math.sin(this.phase * 0.7) * 0.3 * config.speedMultiplier;
         } else {
             // Lamp is OFF - apply gravity and less movement
-            this.targetVy = 0.5; // Constant downward force (gravity)
-            this.targetVx = Math.sin(this.phase * 0.3) * 0.1; // Very subtle horizontal movement
+            this.targetVy = 0.5 * config.speedMultiplier; // Constant downward force (gravity)
+            this.targetVx = Math.sin(this.phase * 0.3) * 0.1 * config.speedMultiplier; // Very subtle horizontal movement
         }
         
         // Smooth velocity changes using easing
@@ -136,7 +136,14 @@ class Blob {
     }
 }
 
-// Update the createBlobs function to distribute blobs more at the bottom
+// Configuration parameters with defaults
+let config = {
+    blobCount: 15,
+    blobBaseSize: 30,
+    speedMultiplier: 1.0
+};
+
+// Update the createBlobs function to use the config
 function createBlobs(count) {
     blobs = [];
     for (let i = 0; i < count; i++) {
@@ -150,7 +157,7 @@ function createBlobs(count) {
         blobs.push(new Blob(
             Math.random() * canvas.width,
             yPos,
-            30 + Math.random() * 20
+            config.blobBaseSize + Math.random() * 20
         ));
     }
 }
@@ -271,5 +278,42 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-createBlobs(15);
+// Add event listeners for the new controls
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up blob count slider
+    const blobCountSlider = document.getElementById('blob-count');
+    const blobCountValue = document.getElementById('blob-count-value');
+    
+    blobCountSlider.addEventListener('input', function() {
+        const newCount = parseInt(this.value);
+        blobCountValue.textContent = newCount;
+        config.blobCount = newCount;
+        createBlobs(newCount);
+    });
+    
+    // Set up blob size slider
+    const blobSizeSlider = document.getElementById('blob-size');
+    const blobSizeValue = document.getElementById('blob-size-value');
+    
+    blobSizeSlider.addEventListener('input', function() {
+        const newSize = parseInt(this.value);
+        blobSizeValue.textContent = newSize;
+        config.blobBaseSize = newSize;
+        createBlobs(config.blobCount);
+    });
+    
+    // Set up blob speed slider
+    const blobSpeedSlider = document.getElementById('blob-speed');
+    const blobSpeedValue = document.getElementById('blob-speed-value');
+    
+    blobSpeedSlider.addEventListener('input', function() {
+        const newSpeed = parseFloat(this.value);
+        blobSpeedValue.textContent = newSpeed.toFixed(1);
+        config.speedMultiplier = newSpeed;
+        // No need to recreate blobs, just let the speed change take effect
+    });
+});
+
+// Initialize with default values
+createBlobs(config.blobCount);
 animate();

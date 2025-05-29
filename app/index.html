@@ -6,12 +6,28 @@
     <link rel="stylesheet" href="css/styles.css">
   </head>
   <body>
-	<h1>Lava Lamp Study</h1>
-	<div class="container">	
-		<div class="lavalamp-box" id="lavalamp-box">
-		</div>
-	</div>
+    <h1>Lava Lamp Study</h1>
+    <div class="container">	
+        <div class="lavalamp-box" id="lavalamp-box">
+        </div>
+        <!-- Switch container will be inserted here by JS -->
+        <div class="controls-container">
+          <div class="slider-controls">
+            <div class="control-group">
+              <label for="blob-count">Blob Count: <span id="blob-count-value">15</span></label>
+              <input type="range" id="blob-count" min="5" max="30" value="15" class="control-slider">
+            </div>
+            <div class="control-group">
+              <label for="blob-size">Blob Size: <span id="blob-size-value">30</span></label>
+              <input type="range" id="blob-size" min="10" max="50" value="30" class="control-slider">
+            </div>
+            <div class="control-group">
+              <label for="blob-speed">Blob Speed: <span id="blob-speed-value">1.0</span></label>
+              <input type="range" id="blob-speed" min="0.2" max="2" value="1" step="0.1" class="control-slider">
+            </div>
+          </div>
+        </div>
+    </div>
     <script src="js/script.js"></script>
   </body>
 </html>
-    
