@@ -38,6 +38,31 @@ function drawBackground() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+// Configuration parameters with defaults
+let config = {
+    blobCount: 15,
+    blobBaseSize: 30,
+    speedMultiplier: 1.0,
+    blobColor: {
+        r: 255,
+        g: 100,
+        b: 50
+    }
+};
+
+// Helper function to convert hex color to RGB
+function hexToRgb(hex) {
+    // Remove the hash if present
+    hex = hex.replace(/^#/, '');
+    
+    // Parse the hex values
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);
+    let b = parseInt(hex.substring(4, 6), 16);
+    
+    return { r, g, b };
+}
+
 class Blob {
     constructor(x, y, r) {
         this.x = x;
@@ -47,9 +72,9 @@ class Blob {
         this.vy = (-0.8 - Math.random() * 0.8) * config.speedMultiplier;  
         this.baseR = r;
         this.color = {
-            r: 255,
-            g: 50 + Math.floor(Math.random() * 50),
-            b: 20 + Math.floor(Math.random() * 30)
+            r: config.blobColor.r,
+            g: config.blobColor.g + Math.floor(Math.random() * 30),
+            b: config.blobColor.b + Math.floor(Math.random() * 20)
         };
         // Add smoothing factors
         this.targetVx = 0;
@@ -136,13 +161,6 @@ class Blob {
     }
 }
 
-// Configuration parameters with defaults
-let config = {
-    blobCount: 15,
-    blobBaseSize: 30,
-    speedMultiplier: 1.0
-};
-
 // Update the createBlobs function to use the config
 function createBlobs(count) {
     blobs = [];
@@ -189,28 +207,26 @@ function drawMetaballs() {
                 let idx = (y * canvas.width + x) * 4;
                 
                 // Create gradient effect based on field strength
-                const intensity = Math.min(1, (v - threshold) * 4);
+                const intensity = Math.min(1, (v - threshold) * 3);
                 
                 // Apply illumination to the colors
-                const lightBoost = illumination * 2; // How much extra brightness from the light
+                const lightBoost = illumination * 5; // How much extra brightness from the light
                 
-                // Brighter colors with light effect
-                data[idx] = Math.min(255, 255 * (1 + lightBoost * 0.2)); // Red - slight boost
-                data[idx + 1] = Math.min(255, (50 + 150 * intensity) * (1 + lightBoost * 0.5)); // Green - medium boost
-                data[idx + 2] = Math.min(255, (20 + 100 * intensity) * (1 + lightBoost)); // Blue - stronger boost
+                // Brighter colors with light effect using the config color
+                data[idx] = Math.min(255, config.blobColor.r * (1 + lightBoost * 0.2)); 
+                data[idx + 1] = Math.min(255, config.blobColor.g * (1 + lightBoost * 0.5));
+                data[idx + 2] = Math.min(255, config.blobColor.b * (1 + lightBoost));
                 data[idx + 3] = Math.min(255, intensity * 255); // Alpha
             }
         }
     }
     ctx.putImageData(image, 0, 0);
     
-    // Add glow effect with light source consideration
+    // Also update the glow effect
     for (let blob of blobs) {
         ctx.beginPath();
         
-        // Calculate illumination based on blob's position
         const blobIllumination = calculateIllumination(blob.y);
-        // Increase the multiplier to make the effect more dramatic
         const illuminationBoost = blobIllumination * 1.2;
         
         const gradient = ctx.createRadialGradient(
@@ -218,13 +234,11 @@ function drawMetaballs() {
             blob.x, blob.y, blob.r * 1.5
         );
         
-        // Adjust glow color based on illumination with greater effect
         const glowIntensity = 0.1 + illuminationBoost * 0.5;
-        gradient.addColorStop(0, `rgba(255, ${120 + illuminationBoost * 90}, ${30 + illuminationBoost * 150}, ${glowIntensity})`);
-        gradient.addColorStop(1, 'rgba(255, 100, 20, 0)');
+        gradient.addColorStop(0, `rgba(${config.blobColor.r}, ${config.blobColor.g}, ${config.blobColor.b}, ${glowIntensity})`);
+        gradient.addColorStop(1, `rgba(${config.blobColor.r}, ${config.blobColor.g}, ${config.blobColor.b}, 0)`);
         
         ctx.fillStyle = gradient;
-        // Make the glow radius more affected by illumination
         ctx.arc(blob.x, blob.y, blob.r * (1.5 + illuminationBoost * 1.5), 0, Math.PI * 2);
         ctx.fill();
     }
@@ -312,8 +326,18 @@ document.addEventListener('DOMContentLoaded', function() {
         config.speedMultiplier = newSpeed;
         // No need to recreate blobs, just let the speed change take effect
     });
+    
+    // Set up blob color picker
+    const blobColorPicker = document.getElementById('blob-color');
+    
+    blobColorPicker.addEventListener('input', function() {
+        const newColor = hexToRgb(this.value);
+        config.blobColor = newColor;
+        createBlobs(config.blobCount);
+    });
 });
 
 // Initialize with default values
+config.blobColor = hexToRgb('#ff6432'); // Set initial color
 createBlobs(config.blobCount);
 animate();
