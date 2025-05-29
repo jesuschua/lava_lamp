@@ -6,6 +6,29 @@ canvas.height = 500;
 container.appendChild(canvas);
 const ctx = canvas.getContext('2d');
 
+// Add lamp state and controls
+let lampOn = true;
+
+// Create toggle switch
+const switchContainer = document.createElement('div');
+switchContainer.className = 'switch-container';
+switchContainer.innerHTML = `
+  <label class="switch">
+    <input type="checkbox" id="lamp-toggle" checked>
+    <span class="slider round"></span>
+  </label>
+  <span class="switch-label">Lamp ${lampOn ? 'ON' : 'OFF'}</span>
+`;
+container.parentNode.insertBefore(switchContainer, container.nextSibling);
+
+// Add event listener to the toggle
+const lampToggle = document.getElementById('lamp-toggle');
+const switchLabel = document.querySelector('.switch-label');
+lampToggle.addEventListener('change', function() {
+    lampOn = this.checked;
+    switchLabel.textContent = `Lamp ${lampOn ? 'ON' : 'OFF'}`;
+});
+
 // Set background gradient for the lava lamp
 function drawBackground() {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -40,31 +63,45 @@ class Blob {
         // Update phase for smooth oscillation
         this.phase += this.oscillationSpeed;
         
-        // Simulate buoyancy: blobs rise when near the bottom, slow near the top
-        const bottomThird = canvas.height * 2/3;
-        const topThird = canvas.height * 1/3;
-        
-        if (this.y > bottomThird) {
-            // Much stronger upward force near the bottom
-            this.targetVy = -0.1 - Math.sin(this.phase) * 0.4;
-        } else if (this.y < topThird) {
-            // Strong downward force near the top
-            this.targetVy = 0.1 + Math.sin(this.phase) * 0.4;
+        if (lampOn) {
+            // Lamp is ON - normal lava lamp behavior
+            // Simulate buoyancy: blobs rise when near the bottom, slow near the top
+            const bottomThird = canvas.height * 2/3;
+            const topThird = canvas.height * 1/3;
+            
+            if (this.y > bottomThird) {
+                // Much stronger upward force near the bottom
+                this.targetVy = -0.1 - Math.sin(this.phase) * 0.4;
+            } else if (this.y < topThird) {
+                // Strong downward force near the top
+                this.targetVy = 0.1 + Math.sin(this.phase) * 0.4;
+            } else {
+                // Moderate forces in the middle with more randomness
+                this.targetVy = (Math.random() > 0.5 ? 0.4 : -0.4) + Math.sin(this.phase) * 0.5;
+            }
+            
+            // Add gentle horizontal oscillation
+            this.targetVx = Math.sin(this.phase * 0.7) * 0.3;
         } else {
-            // Moderate forces in the middle with more randomness
-            this.targetVy = (Math.random() > 0.5 ? 0.4 : -0.4) + Math.sin(this.phase) * 0.5;
+            // Lamp is OFF - apply gravity and less movement
+            this.targetVy = 0.5; // Constant downward force (gravity)
+            this.targetVx = Math.sin(this.phase * 0.3) * 0.1; // Very subtle horizontal movement
         }
-        
-        // Add gentle horizontal oscillation
-        this.targetVx = Math.sin(this.phase * 0.7) * 0.3;
         
         // Smooth velocity changes using easing
         this.vx += (this.targetVx - this.vx) * 0.015;
-        this.vy += (this.targetVy - this.vy) * 0.035; // Even faster vertical easing
+        this.vy += (this.targetVy - this.vy) * 0.035;
         
-        // Apply even less damping to maintain more momentum
-        this.vx *= 0.997;
-        this.vy *= 0.999; // Almost no damping for vertical movement
+        // Apply damping based on lamp state
+        if (lampOn) {
+            // Less damping when lamp is on
+            this.vx *= 0.997;
+            this.vy *= 0.999;
+        } else {
+            // More damping when lamp is off
+            this.vx *= 0.95;
+            this.vy *= 0.98;
+        }
         
         // Adjust velocity caps for more vertical movement
         this.vy = Math.max(Math.min(this.vy, 2.0), -2.0); // Much higher vertical velocity caps
