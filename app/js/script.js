@@ -6,94 +6,111 @@ canvas.height = 500;
 container.appendChild(canvas);
 const ctx = canvas.getContext('2d');
 
-class Particle {
-    constructor(x, y) {
+class Blob {
+    constructor(x, y, r) {
         this.x = x;
         this.y = y;
-        this.speed = 0.2 + Math.random() * 0.8;
-        this.radius = 3 + Math.random() * 2;
-        this.direction = 1;
-        this.weight = this.radius; // Weight based on radius
+        this.r = r;
+        this.vx = (Math.random() - 0.5) * 0.8;
+        this.vy = -0.5 - Math.random() * 0.8;
+        this.baseR = r;
     }
 
-    update(weight) {
-        this.y -= this.speed * this.direction * (1 / weight);
-        if (this.y < 0 || this.y > canvas.height) {
-            this.direction *= -1;
+    update() {
+        // Simulate buoyancy: blobs rise when near the bottom, slow near the top
+        const centerY = canvas.height / 2;
+        if (this.y > centerY) {
+            this.vy -= 0.000007; // gentler buoyancy upwards
+        } else {
+            this.vy += 0.00005; // gentler gravity downwards
         }
+
+        // Add some random wobble for organic movement
+        this.vx += (Math.random() - 0.5) * 0.05;
+
+        // Clamp velocities for stability
+        this.vy = Math.max(Math.min(this.vy, 2), -2);
+        this.vx = Math.max(Math.min(this.vx, 1), -1);
+
+        this.y += this.vy;
+        this.x += this.vx;
+
+        // Bounce off walls
+        if (this.x < this.r) {
+            this.x = this.r;
+            this.vx *= -0.8;
+        }
+        if (this.x > canvas.width - this.r) {
+            this.x = canvas.width - this.r;
+            this.vx *= -0.8;
+        }
+
+        // Reverse direction at top and bottom, with damping
+        if (this.y < this.r) {
+            this.y = this.r;
+            this.vy = Math.abs(this.vy) * 0.7;
+        }
+        if (this.y > canvas.height - this.r) {
+            this.y = canvas.height - this.r;
+            this.vy = -Math.abs(this.vy) * 0.7;
+        }
+
+        // Slightly change radius for organic feel
+        this.r = this.baseR + Math.sin(Date.now() / 500 + this.x) * 2;
     }
 }
 
-let particles = [];
-
-function createParticles(count) {
+let blobs = [];
+function createBlobs(count) {
+    blobs = [];
     for (let i = 0; i < count; i++) {
-        particles.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
+        blobs.push(new Blob(
+            Math.random() * canvas.width,
+            canvas.height - Math.random() * 100,
+            30 + Math.random() * 20
+        ));
     }
 }
 
-function distance(a, b) {
-    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+// Metaball effect
+function metaballField(x, y) {
+    let sum = 0;
+    for (let blob of blobs) {
+        let dx = x - blob.x;
+        let dy = y - blob.y;
+        sum += (blob.r * blob.r) / (dx * dx + dy * dy + 1);
+    }
+    return sum;
 }
 
-function findBlobs() {
-    let blobs = [];
-    let assigned = new Set();
-
-    for (let i = 0; i < particles.length; i++) {
-        if (assigned.has(i)) continue;
-
-        let blob = [particles[i]];
-        assigned.add(i);
-
-        for (let j = i + 1; j < particles.length; j++) {
-            if (assigned.has(j)) continue;
-
-            if (distance(particles[i], particles[j]) < 15) {
-                blob.push(particles[j]);
-                assigned.add(j);
+function drawMetaballs() {
+    let image = ctx.createImageData(canvas.width, canvas.height);
+    let data = image.data;
+    for (let y = 0; y < canvas.height; y += 2) {
+        for (let x = 0; x < canvas.width; x += 2) {
+            let v = metaballField(x, y);
+            if (v > 1.1) {
+                let idx = (y * canvas.width + x) * 4;
+                data[idx] = 255;
+                data[idx + 1] = 99;
+                data[idx + 2] = 71;
+                data[idx + 3] = Math.min(255, (v - 1.1) * 180);
             }
         }
-
-        blobs.push(blob);
     }
-
-    return blobs;
-}
-
-function drawBlob(blob) {
-    ctx.beginPath();
-    let avgX = blob.reduce((sum, p) => sum + p.x, 0) / blob.length;
-    let avgY = blob.reduce((sum, p) => sum + p.y, 0) / blob.length;
-    ctx.moveTo(avgX, avgY);
-
-    for (let i = 0; i <= 20; i++) {
-        let angle = (i / 20) * Math.PI * 2;
-        let radius = 10 + blob.length * 2;
-        let x = avgX + radius * Math.cos(angle);
-        let y = avgY + radius * Math.sin(angle);
-        ctx.lineTo(x, y);
-    }
-
-    ctx.fillStyle = 'rgba(255, 99, 71, 0.8)';
-    ctx.fill();
+    ctx.putImageData(image, 0, 0);
 }
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    let blobs = findBlobs();
-
-    blobs.forEach(blob => {
-        let totalWeight = blob.reduce((sum, p) => sum + p.weight, 0);
-        blob.forEach(particle => particle.update(totalWeight));
-        drawBlob(blob);
-    });
-
+    for (let blob of blobs) {
+        blob.update();
+    }
+    drawMetaballs();
     requestAnimationFrame(animate);
 }
 
-createParticles(50);
+createBlobs(15);
 animate();
 
 // Periodically add new particles
