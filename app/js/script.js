@@ -170,46 +170,98 @@ function drawMetaballs() {
     let image = ctx.createImageData(canvas.width, canvas.height);
     let data = image.data;
     
-    // Lower threshold for more visible blobs
     const threshold = 0.9;
     
-    for (let y = 0; y < canvas.height; y += 1) { // Sample every pixel for higher quality
+    for (let y = 0; y < canvas.height; y += 1) {
+        // Calculate illumination at this y-coordinate
+        const illumination = calculateIllumination(y);
+        
         for (let x = 0; x < canvas.width; x += 1) {
             let v = metaballField(x, y);
             if (v > threshold) {
                 let idx = (y * canvas.width + x) * 4;
                 
                 // Create gradient effect based on field strength
-                const intensity = Math.min(1, (v - threshold) * 2);
+                const intensity = Math.min(1, (v - threshold) * 4);
                 
-                // Brighter, more vibrant colors
-                data[idx] = 255; // Red
-                data[idx + 1] = 50 + 150 * intensity; // Green - increases with intensity
-                data[idx + 2] = 20 + 100 * intensity; // Blue - increases with intensity
-                data[idx + 3] = Math.min(255, intensity * 255); // Alpha - fully opaque
+                // Apply illumination to the colors
+                const lightBoost = illumination * 2; // How much extra brightness from the light
+                
+                // Brighter colors with light effect
+                data[idx] = Math.min(255, 255 * (1 + lightBoost * 0.2)); // Red - slight boost
+                data[idx + 1] = Math.min(255, (50 + 150 * intensity) * (1 + lightBoost * 0.5)); // Green - medium boost
+                data[idx + 2] = Math.min(255, (20 + 100 * intensity) * (1 + lightBoost)); // Blue - stronger boost
+                data[idx + 3] = Math.min(255, intensity * 255); // Alpha
             }
         }
     }
     ctx.putImageData(image, 0, 0);
     
-    // Add glow effect
+    // Add glow effect with light source consideration
     for (let blob of blobs) {
         ctx.beginPath();
+        
+        // Calculate illumination based on blob's position
+        const blobIllumination = calculateIllumination(blob.y);
+        // Increase the multiplier to make the effect more dramatic
+        const illuminationBoost = blobIllumination * 1.2;
+        
         const gradient = ctx.createRadialGradient(
             blob.x, blob.y, 0,
             blob.x, blob.y, blob.r * 1.5
         );
-        gradient.addColorStop(0, 'rgba(255, 150, 50, 0.2)');
+        
+        // Adjust glow color based on illumination with greater effect
+        const glowIntensity = 0.1 + illuminationBoost * 0.5;
+        gradient.addColorStop(0, `rgba(255, ${120 + illuminationBoost * 90}, ${30 + illuminationBoost * 150}, ${glowIntensity})`);
         gradient.addColorStop(1, 'rgba(255, 100, 20, 0)');
+        
         ctx.fillStyle = gradient;
-        ctx.arc(blob.x, blob.y, blob.r * 2, 0, Math.PI * 2);
+        // Make the glow radius more affected by illumination
+        ctx.arc(blob.x, blob.y, blob.r * (1.5 + illuminationBoost * 1.5), 0, Math.PI * 2);
         ctx.fill();
     }
+}
+
+function calculateIllumination(y) {
+    // Calculate how bright a point should be based on distance from bottom light
+    // 1.0 = full brightness (at bottom), decreasing as we go up
+    const distanceFromBottom = canvas.height - y;
+    const normalizedDistance = distanceFromBottom / canvas.height;
+    
+    // Use exponential falloff for more dramatic difference
+    // This will make blobs at the bottom much brighter than those at the top
+    return lampOn ? Math.max(0, Math.pow(1 - normalizedDistance, 2)) : 0;
+}
+
+function drawLightSource() {
+    if (!lampOn) return; // No light when lamp is off
+    
+    // Draw a light glow at the bottom center
+    const lightX = canvas.width / 2;
+    const lightY = canvas.height - 5;
+    const lightRadius = 30;
+    
+    const gradient = ctx.createRadialGradient(
+        lightX, lightY, 0,
+        lightX, lightY, lightRadius * 3
+    );
+    gradient.addColorStop(0, 'rgba(255, 220, 150, 0.8)');
+    gradient.addColorStop(0.3, 'rgba(255, 180, 100, 0.4)');
+    gradient.addColorStop(1, 'rgba(255, 100, 50, 0)');
+    
+    ctx.beginPath();
+    ctx.fillStyle = gradient;
+    ctx.arc(lightX, lightY, lightRadius * 3, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackground();
+    
+    // Draw light source before blobs
+    drawLightSource();
     
     for (let blob of blobs) {
         blob.update();
