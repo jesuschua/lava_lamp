@@ -292,7 +292,136 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Add event listeners for the new controls
+// Add fullscreen functionality
+let isFullscreen = false;
+const originalWidth = canvas.width;
+const originalHeight = canvas.height;
+const fullscreenToggle = document.getElementById('fullscreen-toggle');
+
+// Set up fullscreen toggle
+fullscreenToggle.addEventListener('click', toggleFullscreen);
+
+function toggleFullscreen() {
+    if (!isFullscreen) {
+        enterFullscreen();
+    } else {
+        exitFullscreen();
+    }
+}
+
+function enterFullscreen() {
+    const lampBox = document.getElementById('lavalamp-box');
+    
+    if (lampBox.requestFullscreen) {
+        lampBox.requestFullscreen();
+    } else if (lampBox.mozRequestFullScreen) { // Firefox
+        lampBox.mozRequestFullScreen();
+    } else if (lampBox.webkitRequestFullscreen) { // Chrome, Safari and Opera
+        lampBox.webkitRequestFullscreen();
+    } else if (lampBox.msRequestFullscreen) { // IE/Edge
+        lampBox.msRequestFullscreen();
+    }
+    
+    // Update state
+    isFullscreen = true;
+    fullscreenToggle.innerHTML = '<span class="fullscreen-icon">⤢</span> Exit Fullscreen';
+    
+    // Add class for fullscreen styling
+    lampBox.classList.add('fullscreen-mode');
+    
+    // Request wake lock to prevent screen from turning off
+    requestWakeLock();
+    
+    // Move controls to fullscreen overlay
+    createFullscreenControls();
+}
+
+function exitFullscreen() {
+    if (document.exitFullscreen) {
+        document.exitFullscreen();
+    } else if (document.mozCancelFullScreen) { // Firefox
+        document.mozCancelFullScreen();
+    } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
+        document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) { // IE/Edge
+        document.msExitFullscreen();
+    }
+}
+
+// Handle fullscreen change events
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+function handleFullscreenChange() {
+    const lampBox = document.getElementById('lavalamp-box');
+    
+    if (!document.fullscreenElement && 
+        !document.webkitFullscreenElement && 
+        !document.mozFullScreenElement && 
+        !document.msFullscreenElement) {
+        
+        // Exited fullscreen
+        isFullscreen = false;
+        fullscreenToggle.innerHTML = '<span class="fullscreen-icon">⛶</span> Fullscreen';
+        
+        // Remove fullscreen class
+        lampBox.classList.remove('fullscreen-mode');
+        
+        // Release wake lock when exiting fullscreen
+        releaseWakeLock();
+        
+        // Remove the fullscreen controls if they exist
+        const fullscreenControls = document.querySelector('.fullscreen-controls');
+        if (fullscreenControls) {
+            fullscreenControls.remove();
+        }
+        
+        // No need to recreate blobs or resize canvas - it's already at the original size
+    }
+}
+
+// Remove or comment out the resizeCanvas function since we're not using it anymore
+// function resizeCanvas() { ... }
+
+// Update the window resize event handler
+window.addEventListener('resize', function() {
+    // No need to do anything since we're using CSS scaling
+    // The browser will handle scaling the canvas properly
+});
+
+function createFullscreenControls() {
+    // Create a container for fullscreen controls
+    const fullscreenControls = document.createElement('div');
+    fullscreenControls.className = 'fullscreen-controls';
+    
+    // Add exit fullscreen button
+    const exitButton = document.createElement('button');
+    exitButton.className = 'fullscreen-button';
+    exitButton.innerHTML = '<span class="fullscreen-icon">⤢</span> Exit Fullscreen';
+    exitButton.addEventListener('click', exitFullscreen);
+    
+    fullscreenControls.appendChild(exitButton);
+    
+    // Add to the fullscreen container
+    const lampBox = document.getElementById('lavalamp-box');
+    lampBox.appendChild(fullscreenControls);
+    
+    // Add wake lock indicator
+    const wakeLockIndicator = document.createElement('div');
+    wakeLockIndicator.className = 'wake-lock-indicator';
+    wakeLockIndicator.innerHTML = '<span class="wake-lock-icon">⚡</span> Screen will stay on';
+    
+    // Only show as active if the browser supports wake lock
+    if ('wakeLock' in navigator) {
+        wakeLockIndicator.classList.add('active');
+    }
+    
+    lampBox.appendChild(wakeLockIndicator);
+}
+
+// Add event listeners for the controls
 document.addEventListener('DOMContentLoaded', function() {
     // Set up blob count slider
     const blobCountSlider = document.getElementById('blob-count');
@@ -335,9 +464,122 @@ document.addEventListener('DOMContentLoaded', function() {
         config.blobColor = newColor;
         createBlobs(config.blobCount);
     });
+    
+    // Set up fullscreen toggle
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    
+    if (fullscreenToggle) {
+        fullscreenToggle.addEventListener('click', toggleFullscreen);
+    }
 });
 
 // Initialize with default values
 config.blobColor = hexToRgb('#ff6432'); // Set initial color
 createBlobs(config.blobCount);
 animate();
+
+// Add wake lock functionality to prevent screen from turning off
+let wakeLock = null;
+
+// Function to request a wake lock
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            // Request a screen wake lock
+            wakeLock = await navigator.wakeLock.request('screen');
+            
+            console.log('Wake Lock is active');
+            
+            // Add a listener for when the wake lock is released
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock was released');
+                wakeLock = null;
+            });
+        } else {
+            console.warn('Wake Lock API not supported in this browser');
+        }
+    } catch (err) {
+        console.error(`Wake Lock error: ${err.message}`);
+    }
+}
+
+// Function to release wake lock
+async function releaseWakeLock() {
+    if (wakeLock !== null) {
+        try {
+            await wakeLock.release();
+            wakeLock = null;
+            console.log('Wake Lock released');
+        } catch (err) {
+            console.error(`Wake Lock release error: ${err.message}`);
+        }
+    }
+}
+
+// Update enterFullscreen to request wake lock
+function enterFullscreen() {
+    const lampBox = document.getElementById('lavalamp-box');
+    
+    if (lampBox.requestFullscreen) {
+        lampBox.requestFullscreen();
+    } else if (lampBox.mozRequestFullScreen) { // Firefox
+        lampBox.mozRequestFullScreen();
+    } else if (lampBox.webkitRequestFullscreen) { // Chrome, Safari and Opera
+        lampBox.webkitRequestFullscreen();
+    } else if (lampBox.msRequestFullscreen) { // IE/Edge
+        lampBox.msRequestFullscreen();
+    }
+    
+    // Update state
+    isFullscreen = true;
+    fullscreenToggle.innerHTML = '<span class="fullscreen-icon">⤢</span> Exit Fullscreen';
+    
+    // Add class for fullscreen styling
+    lampBox.classList.add('fullscreen-mode');
+    
+    // Request wake lock to prevent screen from turning off
+    requestWakeLock();
+    
+    // Move controls to fullscreen overlay
+    createFullscreenControls();
+}
+
+// Update handleFullscreenChange to release wake lock when exiting fullscreen
+function handleFullscreenChange() {
+    const lampBox = document.getElementById('lavalamp-box');
+    
+    if (!document.fullscreenElement && 
+        !document.webkitFullscreenElement && 
+        !document.mozFullScreenElement && 
+        !document.msFullscreenElement) {
+        
+        // Exited fullscreen
+        isFullscreen = false;
+        fullscreenToggle.innerHTML = '<span class="fullscreen-icon">⛶</span> Fullscreen';
+        
+        // Remove fullscreen class
+        lampBox.classList.remove('fullscreen-mode');
+        
+        // Release wake lock when exiting fullscreen
+        releaseWakeLock();
+        
+        // Remove the fullscreen controls if they exist
+        const fullscreenControls = document.querySelector('.fullscreen-controls');
+        if (fullscreenControls) {
+            fullscreenControls.remove();
+        }
+    }
+}
+
+// Update the page visibility handling to manage wake lock appropriately
+document.addEventListener('visibilitychange', () => {
+    if (isFullscreen) {
+        if (document.visibilityState === 'visible') {
+            // Re-request wake lock if page becomes visible again
+            requestWakeLock();
+        } else {
+            // Release wake lock if page is hidden
+            releaseWakeLock();
+        }
+    }
+});
