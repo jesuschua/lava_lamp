@@ -271,9 +271,9 @@ input:checked + .slider:before {
     image-rendering: crisp-edges;
 }
 
-@media (max-height: 700px) {
+@media (max-height: 900px) {
     .fullscreen-mode canvas {
-        transform: scale(4); /* Smaller scale for smaller screens */
+        transform: scale(2); /* Smaller scale for smaller screens */
     }
 }
 
