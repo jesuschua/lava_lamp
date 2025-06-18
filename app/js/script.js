@@ -1,8 +1,8 @@
 // Get the container element
 const container = document.getElementById('lavalamp-box');
 const canvas = document.createElement('canvas');
-canvas.width = 500;
-canvas.height = 500;
+canvas.width = 640;
+canvas.height = 360;
 container.appendChild(canvas);
 const ctx = canvas.getContext('2d');
 

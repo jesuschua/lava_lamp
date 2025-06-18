@@ -265,7 +265,7 @@ input:checked + .slider:before {
 
 .fullscreen-mode canvas {
     /* Scale the canvas up while maintaining its aspect ratio */
-    transform: scale(1.8); /* Adjust this value as needed for your desired size */
+    transform: scale(4); /* Adjust this value as needed for your desired size */
     transform-origin: center;
     image-rendering: -webkit-optimize-contrast; /* Improves the appearance of scaled images in some browsers */
     image-rendering: crisp-edges;
@@ -273,13 +273,13 @@ input:checked + .slider:before {
 
 @media (max-height: 700px) {
     .fullscreen-mode canvas {
-        transform: scale(1.4); /* Smaller scale for smaller screens */
+        transform: scale(4); /* Smaller scale for smaller screens */
     }
 }
 
 @media (min-height: 1000px) {
     .fullscreen-mode canvas {
-        transform: scale(2.2); /* Larger scale for larger screens */
+        transform: scale(4); /* Larger scale for larger screens */
     }
 }
 
